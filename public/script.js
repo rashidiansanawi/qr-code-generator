@@ -7,7 +7,7 @@ document.getElementById('qrForm').addEventListener('submit', async (e) => {
     // Dynamically determine API endpoint
     const apiBaseUrl = window.location.origin.includes('localhost')
       ? 'http://localhost:3000'
-      : 'https://your-app.onrender.com'; // Replace with your Render app URL
+      : 'https://qr-code-generator-4xvi.onrender.com'; // Replace with your Render app URL
 
     // Send request to backend
     const response = await fetch(`${apiBaseUrl}/generate`, {
