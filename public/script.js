@@ -1,9 +1,15 @@
 document.getElementById('qrForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
+  e.preventDefault(); // Prevent default form submission
 
-  const url = document.getElementById('url').value;
+  const url = document.getElementById('url').value.trim(); // Trim whitespace
   const loading = document.getElementById('loading');
   const output = document.getElementById('output');
+
+  // Validate URL format (additional client-side validation)
+  if (!url || !isValidUrl(url)) {
+    output.innerHTML = '<p style="color: red;">Please enter a valid URL.</p>';
+    return;
+  }
 
   try {
     // Show loading message
@@ -23,22 +29,36 @@ document.getElementById('qrForm').addEventListener('submit', async (e) => {
     });
 
     if (!response.ok) {
-      throw new Error('Failed to generate QR code');
+      const errorMsg = `Error ${response.status}: ${response.statusText}`;
+      throw new Error(errorMsg);
     }
 
     // Parse the response
     const data = await response.json();
 
-    // Render the QR code
+    // Render the QR code and dynamic URL
     output.innerHTML = `
       <p>Dynamic URL: <a href="${data.dynamicUrl}" target="_blank">${data.dynamicUrl}</a></p>
-      <img src="${data.qrCode}" alt="QR Code">
+      <img src="${data.qrCode}" alt="Generated QR Code">
     `;
   } catch (error) {
     console.error('Error:', error);
-    output.innerHTML = 'Failed to generate QR code.';
+    output.innerHTML = `
+      <p style="color: red;">Failed to generate QR code. Please try again later.</p>
+      <p>Error Details: ${error.message}</p>
+    `;
   } finally {
     // Hide loading message
     loading.style.display = 'none';
   }
 });
+
+// Utility function to validate URL
+function isValidUrl(string) {
+  try {
+    new URL(string);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}

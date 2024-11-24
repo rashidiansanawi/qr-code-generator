@@ -22,7 +22,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "better-sqlite3": "^8.0.1",
+    "better-sqlite3": "^8.7.0",
     "cors": "^2.8.5",
     "express": "^4.21.1",
     "helmet": "^8.0.0",
@@ -31,5 +31,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }

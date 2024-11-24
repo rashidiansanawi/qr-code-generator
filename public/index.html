@@ -20,15 +20,17 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
+      gap: 15px;
+      width: 100%;
+      max-width: 400px;
     }
     input {
       padding: 10px;
-      width: 90%; /* Adjust for smaller screens */
-      max-width: 300px;
+      width: 100%; /* Responsive width */
       border: 1px solid #ccc;
       border-radius: 5px;
       font-size: 16px;
+      box-sizing: border-box; /* Ensure consistent padding */
     }
     button {
       padding: 10px 20px;
@@ -38,9 +40,18 @@
       border-radius: 5px;
       font-size: 16px;
       cursor: pointer;
+      transition: background-color 0.3s ease;
     }
     button:hover {
       background-color: #0056b3;
+    }
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    #loading {
+      font-size: 14px;
+      color: #666;
     }
     #output {
       margin-top: 20px;
@@ -52,16 +63,78 @@
       border-radius: 10px;
       margin-top: 10px;
     }
+    a {
+      color: #007bff;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 600px) {
+      form {
+        padding: 0 10px;
+      }
+    }
   </style>
 </head>
 <body>
   <h1>Dynamic QR Code Generator</h1>
   <form id="qrForm">
-    <input type="text" id="url" placeholder="Enter URL (e.g., https://example.com)" aria-label="Enter the URL to generate a QR code" required>
+    <input 
+      type="url" 
+      id="url" 
+      placeholder="Enter URL (e.g., https://example.com)" 
+      aria-label="Enter the URL to generate a QR code" 
+      required>
     <button type="submit">Generate QR Code</button>
     <p id="loading" style="display: none;">Generating QR Code...</p>
   </form>
   <div id="output"></div>
-  <script src="script.js"></script>
+  <script>
+    document.getElementById('qrForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const url = document.getElementById('url').value;
+      const loading = document.getElementById('loading');
+      const output = document.getElementById('output');
+
+      try {
+        // Show loading message
+        loading.style.display = 'block';
+        output.innerHTML = '';
+
+        // Determine API base URL dynamically
+        const apiBaseUrl = window.location.origin.includes('localhost')
+          ? 'http://localhost:3000'
+          : 'https://qr-code-generator-4xvi.onrender.com';
+
+        // Send request to backend
+        const response = await fetch(`${apiBaseUrl}/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate QR code');
+        }
+
+        // Parse response data
+        const data = await response.json();
+
+        // Render the QR code and dynamic URL
+        output.innerHTML = `
+          <p>Dynamic URL: <a href="${data.dynamicUrl}" target="_blank">${data.dynamicUrl}</a></p>
+          <img src="${data.qrCode}" alt="Generated QR Code">
+        `;
+      } catch (error) {
+        console.error('Error:', error);
+        output.innerHTML = '<p style="color: red;">Failed to generate QR code. Please try again.</p>';
+      } finally {
+        // Hide loading message
+        loading.style.display = 'none';
+      }
+    });
+  </script>
 </body>
 </html>
