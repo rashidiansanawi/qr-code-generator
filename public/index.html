@@ -4,12 +4,62 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dynamic QR Code Generator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+      background-color: #f9f9f9;
+    }
+    h1 {
+      color: #333;
+    }
+    form {
+      margin: 20px auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    input {
+      padding: 10px;
+      width: 90%; /* Adjust for smaller screens */
+      max-width: 300px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #output {
+      margin-top: 20px;
+    }
+    img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      margin-top: 10px;
+    }
+  </style>
 </head>
 <body>
   <h1>Dynamic QR Code Generator</h1>
   <form id="qrForm">
-    <input type="text" id="url" placeholder="Enter URL" required>
+    <input type="text" id="url" placeholder="Enter URL (e.g., https://example.com)" aria-label="Enter the URL to generate a QR code" required>
     <button type="submit">Generate QR Code</button>
+    <p id="loading" style="display: none;">Generating QR Code...</p>
   </form>
   <div id="output"></div>
   <script src="script.js"></script>
