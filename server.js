@@ -5,7 +5,6 @@ const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const PORT = process.env.PORT || 3000; // Render will set the PORT environment variable
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 // Middleware
 app.use(cors()); // Enable CORS for frontend requests
@@ -29,7 +28,7 @@ app.post('/generate', async (req, res) => {
     urlDatabase[id] = url;
 
     // Generate the dynamic URL
-    const dynamicUrl = `http://localhost:${PORT}/redirect/${id}`;
+    const dynamicUrl = `${req.protocol}://${req.get('host')}/redirect/${id}`;
 
     // Create QR code with the dynamic URL
     const qrCode = await qr.toDataURL(dynamicUrl);
@@ -57,4 +56,4 @@ app.get('/redirect/:id', (req, res) => {
 });
 
 // Start the server
-app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
