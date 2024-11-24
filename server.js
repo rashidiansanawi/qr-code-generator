@@ -47,16 +47,11 @@ app.post('/generate', async (req, res) => {
     const dynamicUrl = `${req.protocol}://${req.get('host')}/redirect/${id}`;
     log(`Generated dynamic URL: ${dynamicUrl}`);
 
-    db.run(
-      `INSERT INTO links (id, originalUrl, dynamicUrl) VALUES (?, ?, ?)`,
-      [id, url, dynamicUrl],
-      (err) => {
-        if (err) {
-          console.error('Database Insert Error:', err.message);
-          return res.status(500).json({ error: 'Failed to save link to the database', details: err.message });
-        }
-      }
+    // Save to database
+    const stmt = db.prepare(
+      `INSERT INTO links (id, originalUrl, dynamicUrl) VALUES (?, ?, ?)`
     );
+    stmt.run(id, url, dynamicUrl);
 
     const qrCode = await qr.toDataURL(dynamicUrl);
     res.json({ qrCode, dynamicUrl });
@@ -70,29 +65,23 @@ app.post('/generate', async (req, res) => {
 app.get('/redirect/:id', (req, res) => {
   const id = req.params.id;
 
-  db.get(`SELECT originalUrl FROM links WHERE id = ?`, [id], (err, row) => {
-    if (err) {
-      console.error('Database Select Error:', err.message);
-      return res.status(500).send('Internal Server Error');
-    }
+  // Retrieve original URL
+  const stmt = db.prepare(`SELECT originalUrl FROM links WHERE id = ?`);
+  const row = stmt.get(id);
 
-    if (row) {
-      return res.redirect(row.originalUrl);
-    } else {
-      res.status(404).send('URL not found');
-    }
-  });
+  if (row) {
+    return res.redirect(row.originalUrl);
+  } else {
+    res.status(404).send('URL not found');
+  }
 });
 
 // Route: Fetch All Links
 app.get('/links', (req, res) => {
-  db.all(`SELECT * FROM links`, [], (err, rows) => {
-    if (err) {
-      console.error('Database Fetch Error:', err.message);
-      return res.status(500).json({ error: 'Failed to retrieve links', details: err.message });
-    }
-    res.json(rows);
-  });
+  const stmt = db.prepare(`SELECT * FROM links`);
+  const rows = stmt.all();
+
+  res.json(rows);
 });
 
 // Start the server
@@ -101,12 +90,6 @@ app.listen(PORT, () => log(`Server running on port ${PORT}`));
 // Graceful shutdown
 process.on('SIGINT', () => {
   log('Shutting down server...');
-  db.close((err) => {
-    if (err) {
-      console.error('Error closing database connection:', err.message);
-    } else {
-      log('Database connection closed.');
-    }
-    process.exit(0);
-  });
+  db.close();
+  process.exit(0);
 });
