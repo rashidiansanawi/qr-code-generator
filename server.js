@@ -7,7 +7,11 @@ const app = express();
 const PORT = process.env.PORT || 3000; // Render will set the PORT environment variable
 
 // Middleware
-app.use(cors()); // Enable CORS for frontend requests
+app.use(
+  cors({
+    origin: 'https://qr-code-generator-4xvi.onrender.com', // Replace with your Render app URL
+  })
+); // Enable CORS for frontend requests
 app.use(express.json()); // Parse JSON request bodies
 app.use(express.static('public')); // Serve frontend files from the 'public' folder
 
@@ -29,6 +33,7 @@ app.post('/generate', async (req, res) => {
 
     // Generate the dynamic URL
     const dynamicUrl = `${req.protocol}://${req.get('host')}/redirect/${id}`;
+    console.log('Generated dynamic URL:', dynamicUrl);
 
     // Create QR code with the dynamic URL
     const qrCode = await qr.toDataURL(dynamicUrl);
@@ -36,8 +41,8 @@ app.post('/generate', async (req, res) => {
     // Return the QR code and dynamic URL
     res.json({ qrCode, dynamicUrl });
   } catch (error) {
-    console.error('QR Code Generation Error:', error);
-    res.status(500).json({ error: 'Error generating QR code' });
+    console.error('QR Code Generation Error:', error.message);
+    res.status(500).json({ error: 'Error generating QR code', details: error.message });
   }
 });
 
