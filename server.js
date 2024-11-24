@@ -8,20 +8,36 @@ const db = require('./database'); // SQLite database setup
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// Define allowed origins
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+  'http://localhost:3000',
+  'https://qr-code-generator-4xvi.onrender.com',
+];
+
+// Middleware: CORS setup
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g., mobile apps or curl)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
   })
 );
-app.use(helmet()); // Add default security headers
+
+// Middleware: Helmet for security headers
 app.use(
-  helmet.contentSecurityPolicy({
-    directives: {
-      defaultSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:'], // Allow QR code images
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'"],
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:'], // Allow QR code images
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'"],
+      },
     },
   })
 );

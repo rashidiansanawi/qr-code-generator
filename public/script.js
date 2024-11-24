@@ -5,16 +5,18 @@ document.getElementById('qrForm').addEventListener('submit', async (e) => {
   const loading = document.getElementById('loading');
   const output = document.getElementById('output');
 
+  // Clear previous messages
+  output.innerHTML = '';
+
   // Validate URL format (additional client-side validation)
   if (!url || !isValidUrl(url)) {
-    output.innerHTML = '<p style="color: red;">Please enter a valid URL.</p>';
+    output.innerHTML = '<p style="color: red;">Please enter a valid URL starting with http or https.</p>';
     return;
   }
 
   try {
     // Show loading message
     loading.style.display = 'block';
-    output.innerHTML = '';
 
     // Dynamically determine API endpoint
     const apiBaseUrl = window.location.origin.includes('localhost')
@@ -42,10 +44,9 @@ document.getElementById('qrForm').addEventListener('submit', async (e) => {
       <img src="${data.qrCode}" alt="Generated QR Code">
     `;
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error:', error); // Log error details
     output.innerHTML = `
       <p style="color: red;">Failed to generate QR code. Please try again later.</p>
-      <p>Error Details: ${error.message}</p>
     `;
   } finally {
     // Hide loading message
