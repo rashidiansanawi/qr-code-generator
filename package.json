@@ -22,11 +22,11 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "better-sqlite3": "^8.0.1",  // Replacing sqlite3
     "cors": "^2.8.5",
     "express": "^4.21.1",
-    "helmet": "^8.0.0",
+    "helmet": "^8.0.0",  // Fixed version for helmet
     "qrcode": "^1.5.4",
-    "sqlite3": "^5.1.7",
     "uuid": "^11.0.3"
   },
   "devDependencies": {
