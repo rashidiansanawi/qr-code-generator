@@ -2,8 +2,14 @@ document.getElementById('qrForm').addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const url = document.getElementById('url').value;
+  const loading = document.getElementById('loading');
+  const output = document.getElementById('output');
 
   try {
+    // Show loading message
+    loading.style.display = 'block';
+    output.innerHTML = '';
+
     // Dynamically determine API endpoint
     const apiBaseUrl = window.location.origin.includes('localhost')
       ? 'http://localhost:3000'
@@ -24,12 +30,15 @@ document.getElementById('qrForm').addEventListener('submit', async (e) => {
     const data = await response.json();
 
     // Render the QR code
-    document.getElementById('output').innerHTML = `
+    output.innerHTML = `
       <p>Dynamic URL: <a href="${data.dynamicUrl}" target="_blank">${data.dynamicUrl}</a></p>
       <img src="${data.qrCode}" alt="QR Code">
     `;
   } catch (error) {
     console.error('Error:', error);
-    document.getElementById('output').innerText = 'Failed to generate QR code.';
+    output.innerHTML = 'Failed to generate QR code.';
+  } finally {
+    // Hide loading message
+    loading.style.display = 'none';
   }
 });
