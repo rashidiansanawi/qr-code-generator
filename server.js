@@ -56,6 +56,58 @@ const isValidUrl = (string) => {
   }
 };
 
+// Utility: Apply Migrations
+const applyMigrations = () => {
+  log('Applying database migrations...');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS migrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  const migrations = [
+    {
+      name: 'create_links_table',
+      sql: `
+        CREATE TABLE IF NOT EXISTS links (
+          id TEXT PRIMARY KEY,
+          originalUrl TEXT NOT NULL,
+          dynamicUrl TEXT NOT NULL,
+          redirectCount INTEGER DEFAULT 0
+        );
+      `,
+    },
+    {
+      name: 'add_example_column', // Example migration for future schema changes
+      sql: `
+        ALTER TABLE links ADD COLUMN exampleColumn TEXT DEFAULT NULL;
+      `,
+    },
+  ];
+
+  migrations.forEach(({ name, sql }) => {
+    const row = db.prepare(`SELECT COUNT(*) AS count FROM migrations WHERE name = ?`).get(name);
+
+    if (row.count === 0) {
+      log(`Applying migration: ${name}`);
+      try {
+        db.exec(sql);
+        db.prepare(`INSERT INTO migrations (name) VALUES (?)`).run(name);
+        log(`Migration applied: ${name}`);
+      } catch (error) {
+        log(`Error applying migration ${name}: ${error.message}`);
+      }
+    } else {
+      log(`Migration already applied: ${name}`);
+    }
+  });
+};
+
+// Apply database migrations on startup
+applyMigrations();
+
 // Route: Generate QR Code
 app.post('/generate', async (req, res) => {
   try {
@@ -109,15 +161,12 @@ app.get('/redirect/:id', (req, res) => {
   }
 });
 
-// Route: Fetch All Links with Pagination
+// Route: Fetch All Links
 app.get('/links', (req, res) => {
   try {
     const { limit = 10, offset = 0 } = req.query;
-    const parsedLimit = Math.max(parseInt(limit), 1); // Ensure limit is at least 1
-    const parsedOffset = Math.max(parseInt(offset), 0); // Offset cannot be negative
-
     const stmt = db.prepare(`SELECT * FROM links LIMIT ? OFFSET ?`);
-    const rows = stmt.all(parsedLimit, parsedOffset);
+    const rows = stmt.all(parseInt(limit), parseInt(offset));
 
     res.json(rows);
   } catch (error) {
@@ -166,37 +215,5 @@ app.put('/links/:id', (req, res) => {
     res.status(500).json({ error: 'Failed to update link', details: error.message });
   }
 });
-
-// Route: Search Links
-app.get('/links/search', (req, res) => {
-  const { query = '' } = req.query;
-
-  try {
-    const stmt = db.prepare(`
-      SELECT * FROM links WHERE originalUrl LIKE ? OR dynamicUrl LIKE ?
-    `);
-    const rows = stmt.all(`%${query}%`, `%${query}%`);
-    res.json(rows);
-  } catch (error) {
-    console.error('Database Search Error:', error.message);
-    res.status(500).json({ error: 'Failed to search links', details: error.message });
-  }
-});
-
-// Initialize database
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS links (
-      id TEXT PRIMARY KEY,
-      originalUrl TEXT NOT NULL,
-      dynamicUrl TEXT NOT NULL,
-      redirectCount INTEGER DEFAULT 0
-    )
-  `);
-  log('Database initialized successfully.');
-} catch (error) {
-  console.error('Error initializing database:', error.message);
-  process.exit(1);
-}
 
 app.listen(PORT, () => log(`Server running on port ${PORT}`));
