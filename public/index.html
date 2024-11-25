@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dynamic QR Code Generator</title>
+  <title>QR Code Generator Dashboard</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>Dynamic QR Code Generator</h1>
+  <h1>QR Code Generator Dashboard</h1>
+
+  <!-- QR Code Generation Form -->
   <form id="qrForm">
     <input 
       type="url" 
@@ -19,6 +21,37 @@
     <p id="loading" style="display: none;">Generating QR Code...</p>
   </form>
   <div id="output"></div>
+
+  <!-- Dashboard Section -->
+  <section id="dashboard">
+    <h2>Manage Links</h2>
+
+    <!-- Search Box -->
+    <input 
+      type="text" 
+      id="searchQuery" 
+      placeholder="Search for a link by URL or ID..." 
+      aria-label="Search Links"
+    >
+    <button id="searchBtn">Search</button>
+
+    <!-- Links Table -->
+    <table id="linksTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Original URL</th>
+          <th>Dynamic URL</th>
+          <th>Redirect Count</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Dynamic Rows Will Populate Here -->
+      </tbody>
+    </table>
+  </section>
+
   <script src="script.js" defer></script>
 </body>
 </html>
