@@ -13,6 +13,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
   'https://qr-code-generator-4xvi.onrender.com',
 ];
 
+// Middleware: CORS setup
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -24,6 +25,8 @@ app.use(
     },
   })
 );
+
+// Middleware: Helmet for security headers
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -36,11 +39,22 @@ app.use(
     },
   })
 );
+
 app.use(express.json());
 app.use(express.static('public'));
 
 // Utility: Log with timestamp
 const log = (message) => console.log(`[${new Date().toISOString()}] ${message}`);
+
+// Utility: Validate URL
+const isValidUrl = (string) => {
+  try {
+    new URL(string);
+    return true;
+  } catch (_) {
+    return false;
+  }
+};
 
 // Route: Generate QR Code
 app.post('/generate', async (req, res) => {
@@ -52,14 +66,6 @@ app.post('/generate', async (req, res) => {
     }
 
     const cleanUrl = url.trim();
-    const isValidUrl = (string) => {
-      try {
-        new URL(string);
-        return true;
-      } catch (_) {
-        return false;
-      }
-    };
 
     if (!isValidUrl(cleanUrl)) {
       return res.status(400).json({ error: 'Invalid URL format' });
@@ -103,12 +109,15 @@ app.get('/redirect/:id', (req, res) => {
   }
 });
 
-// Route: Fetch All Links
+// Route: Fetch All Links with Pagination
 app.get('/links', (req, res) => {
   try {
     const { limit = 10, offset = 0 } = req.query;
+    const parsedLimit = Math.max(parseInt(limit), 1); // Ensure limit is at least 1
+    const parsedOffset = Math.max(parseInt(offset), 0); // Offset cannot be negative
+
     const stmt = db.prepare(`SELECT * FROM links LIMIT ? OFFSET ?`);
-    const rows = stmt.all(parseInt(limit), parseInt(offset));
+    const rows = stmt.all(parsedLimit, parsedOffset);
 
     res.json(rows);
   } catch (error) {
@@ -155,6 +164,22 @@ app.put('/links/:id', (req, res) => {
   } catch (error) {
     console.error('Database Update Error:', error.message);
     res.status(500).json({ error: 'Failed to update link', details: error.message });
+  }
+});
+
+// Route: Search Links
+app.get('/links/search', (req, res) => {
+  const { query = '' } = req.query;
+
+  try {
+    const stmt = db.prepare(`
+      SELECT * FROM links WHERE originalUrl LIKE ? OR dynamicUrl LIKE ?
+    `);
+    const rows = stmt.all(`%${query}%`, `%${query}%`);
+    res.json(rows);
+  } catch (error) {
+    console.error('Database Search Error:', error.message);
+    res.status(500).json({ error: 'Failed to search links', details: error.message });
   }
 });
 
