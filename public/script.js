@@ -11,7 +11,10 @@ document.getElementById('qrForm').addEventListener('submit', async (e) => {
 
   // Validate URL format (additional client-side validation)
   if (!url || !isValidUrl(url)) {
-    output.innerHTML = '<p style="color: red;">Invalid URL! Please enter a valid URL starting with http or https.</p>';
+    output.innerHTML = `
+      <p style="color: red;">
+        Invalid URL! Please enter a valid URL starting with http or https.
+      </p>`;
     return;
   }
 
@@ -41,7 +44,9 @@ document.getElementById('qrForm').addEventListener('submit', async (e) => {
 
     // Render the QR code and dynamic URL
     output.innerHTML = `
-      <p>Dynamic URL: <a href="${data.dynamicUrl}" target="_blank">${data.dynamicUrl}</a></p>
+      <p>Dynamic URL: 
+        <a href="${data.dynamicUrl}" target="_blank">${data.dynamicUrl}</a>
+      </p>
       <img src="${data.qrCode}" alt="Generated QR Code">
     `;
   } catch (error) {

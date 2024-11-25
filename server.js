@@ -56,17 +56,11 @@ const isValidUrl = (string) => {
   }
 };
 
-// Utility: Apply Migrations
+// Utility: Apply Schema Migrations
 const applyMigrations = () => {
-  log('Applying database migrations...');
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS migrations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL,
-      applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-  `);
+  log('Applying database schema migrations...');
 
+  // Define required migrations
   const migrations = [
     {
       name: 'create_links_table',
@@ -76,25 +70,49 @@ const applyMigrations = () => {
           originalUrl TEXT NOT NULL,
           dynamicUrl TEXT NOT NULL,
           redirectCount INTEGER DEFAULT 0
-        );
+        )
       `,
     },
     {
-      name: 'add_example_column', // Example migration for future schema changes
+      name: 'add_redirect_count_column',
       sql: `
-        ALTER TABLE links ADD COLUMN exampleColumn TEXT DEFAULT NULL;
+        ALTER TABLE links ADD COLUMN redirectCount INTEGER DEFAULT 0
       `,
+      skipIfExists: true, // Only apply if the column doesn't already exist
     },
   ];
 
-  migrations.forEach(({ name, sql }) => {
-    const row = db.prepare(`SELECT COUNT(*) AS count FROM migrations WHERE name = ?`).get(name);
+  // Ensure the migrations table exists
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS migrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
-    if (row.count === 0) {
-      log(`Applying migration: ${name}`);
+  // Apply migrations
+  migrations.forEach(({ name, sql, skipIfExists }) => {
+    const alreadyApplied = db
+      .prepare('SELECT COUNT(*) AS count FROM migrations WHERE name = ?')
+      .get(name).count;
+
+    if (!alreadyApplied) {
       try {
-        db.exec(sql);
-        db.prepare(`INSERT INTO migrations (name) VALUES (?)`).run(name);
+        // For `skipIfExists` migrations, check schema before applying
+        if (skipIfExists) {
+          const columnExists = db
+            .prepare("PRAGMA table_info('links')")
+            .all()
+            .some((col) => col.name === 'redirectCount');
+          if (columnExists) {
+            log(`Migration skipped: ${name} (column already exists)`);
+            return;
+          }
+        }
+
+        db.exec(sql); // Apply the migration SQL
+        db.prepare('INSERT INTO migrations (name) VALUES (?)').run(name); // Track applied migration
         log(`Migration applied: ${name}`);
       } catch (error) {
         log(`Error applying migration ${name}: ${error.message}`);
@@ -105,7 +123,7 @@ const applyMigrations = () => {
   });
 };
 
-// Apply database migrations on startup
+// Apply schema migrations on startup
 applyMigrations();
 
 // Route: Generate QR Code
@@ -161,7 +179,7 @@ app.get('/redirect/:id', (req, res) => {
   }
 });
 
-// Route: Fetch All Links
+// Route: Fetch All Links with Pagination
 app.get('/links', (req, res) => {
   try {
     const { limit = 10, offset = 0 } = req.query;
@@ -172,47 +190,6 @@ app.get('/links', (req, res) => {
   } catch (error) {
     console.error('Database Fetch Error:', error.message);
     res.status(500).json({ error: 'Failed to retrieve links', details: error.message });
-  }
-});
-
-// Route: Delete Link
-app.delete('/links/:id', (req, res) => {
-  const id = req.params.id;
-
-  try {
-    const stmt = db.prepare(`DELETE FROM links WHERE id = ?`);
-    const result = stmt.run(id);
-
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Link not found' });
-    }
-    res.json({ success: true, id });
-  } catch (error) {
-    console.error('Database Delete Error:', error.message);
-    res.status(500).json({ error: 'Failed to delete link', details: error.message });
-  }
-});
-
-// Route: Update Link
-app.put('/links/:id', (req, res) => {
-  const id = req.params.id;
-  const { originalUrl } = req.body;
-
-  if (!originalUrl) {
-    return res.status(400).json({ error: 'originalUrl is required' });
-  }
-
-  try {
-    const stmt = db.prepare(`UPDATE links SET originalUrl = ? WHERE id = ?`);
-    const result = stmt.run(originalUrl, id);
-
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Link not found' });
-    }
-    res.json({ success: true, id, originalUrl });
-  } catch (error) {
-    console.error('Database Update Error:', error.message);
-    res.status(500).json({ error: 'Failed to update link', details: error.message });
   }
 });
 
