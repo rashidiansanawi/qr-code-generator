@@ -1,3 +1,4 @@
+// QR Code Form Handler
 document.getElementById('qrForm').addEventListener('submit', async (e) => {
   e.preventDefault(); // Prevent default form submission
 
@@ -63,6 +64,86 @@ document.getElementById('qrForm').addEventListener('submit', async (e) => {
     loading.style.display = 'none';
   }
 });
+
+// Fetch and Display Links in Dashboard
+async function fetchLinks(query = '') {
+  const tableBody = document.querySelector('#linksTable tbody');
+  tableBody.innerHTML = ''; // Clear existing rows
+
+  try {
+    // Dynamically determine API endpoint
+    const apiBaseUrl = window.location.origin.includes('localhost')
+      ? 'http://localhost:3000'
+      : 'https://qr-code-generator-4xvi.onrender.com'; // Replace with your Render app URL
+
+    // Fetch links
+    const response = await fetch(`${apiBaseUrl}/links?query=${query}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch links: ${response.statusText}`);
+    }
+
+    const links = await response.json();
+
+    // Populate table rows
+    links.forEach((link) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${link.id}</td>
+        <td>${link.originalUrl}</td>
+        <td><a href="${link.dynamicUrl}" target="_blank">${link.dynamicUrl}</a></td>
+        <td>${link.redirectCount}</td>
+        <td>
+          <button class="delete-btn" data-id="${link.id}">Delete</button>
+        </td>
+      `;
+      tableBody.appendChild(row);
+    });
+
+    // Add delete functionality
+    document.querySelectorAll('.delete-btn').forEach((button) => {
+      button.addEventListener('click', () => deleteLink(button.dataset.id));
+    });
+  } catch (error) {
+    console.error('Error fetching links:', error);
+  }
+}
+
+// Delete Link
+async function deleteLink(id) {
+  if (!confirm('Are you sure you want to delete this link?')) return;
+
+  try {
+    // Dynamically determine API endpoint
+    const apiBaseUrl = window.location.origin.includes('localhost')
+      ? 'http://localhost:3000'
+      : 'https://qr-code-generator-4xvi.onrender.com'; // Replace with your Render app URL
+
+    // Send delete request
+    const response = await fetch(`${apiBaseUrl}/links/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete link: ${response.statusText}`);
+    }
+
+    alert('Link deleted successfully!');
+    fetchLinks(); // Refresh the table
+  } catch (error) {
+    console.error('Error deleting link:', error);
+    alert('Failed to delete the link. Please try again.');
+  }
+}
+
+// Search Links
+document.getElementById('searchBtn').addEventListener('click', (e) => {
+  e.preventDefault();
+  const query = document.getElementById('searchQuery').value.trim();
+  fetchLinks(query);
+});
+
+// Fetch links on page load
+fetchLinks();
 
 // Utility function to validate URL
 function isValidUrl(string) {
