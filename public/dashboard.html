@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Code Links Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <h1>QR Code Links Dashboard</h1>
+  <div id="controls">
+    <input type="text" id="searchInput" placeholder="Search links..." />
+    <button id="searchButton">Search</button>
+  </div>
+  <table id="linksTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Original URL</th>
+        <th>Dynamic URL</th>
+        <th>Redirect Count</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Rows will be dynamically added here -->
+    </tbody>
+  </table>
+  <script src="dashboard.js"></script>
+</body>
+</html>
