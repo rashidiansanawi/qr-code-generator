@@ -2,7 +2,7 @@
   "name": "qr-code-generator",
   "version": "1.0.0",
   "description": "A dynamic QR code generator with database integration for URL redirection.",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
@@ -18,9 +18,11 @@
     "generator",
     "URL",
     "shortener",
-    "express"
+    "express",
+    "sqlite",
+    "backend"
   ],
-  "author": "",
+  "author": "Rashidi A.",
   "license": "MIT",
   "dependencies": {
     "better-sqlite3": "^8.7.0",

@@ -5,12 +5,13 @@ document.getElementById('qrForm').addEventListener('submit', async (e) => {
   const loading = document.getElementById('loading');
   const output = document.getElementById('output');
 
-  // Clear previous messages
+  // Clear previous messages and set loading state
   output.innerHTML = '';
+  loading.style.display = 'none';
 
   // Validate URL format (additional client-side validation)
   if (!url || !isValidUrl(url)) {
-    output.innerHTML = '<p style="color: red;">Please enter a valid URL starting with http or https.</p>';
+    output.innerHTML = '<p style="color: red;">Invalid URL! Please enter a valid URL starting with http or https.</p>';
     return;
   }
 
@@ -45,11 +46,15 @@ document.getElementById('qrForm').addEventListener('submit', async (e) => {
     `;
   } catch (error) {
     console.error('Error:', error); // Log error details
+    const errorMessage =
+      error.message.includes('NetworkError') || error.message.includes('Failed to fetch')
+        ? 'Failed to connect to the server. Please check your network and try again.'
+        : 'Failed to generate QR code. Please try again later.';
     output.innerHTML = `
-      <p style="color: red;">Failed to generate QR code. Please try again later.</p>
+      <p style="color: red;">${errorMessage}</p>
     `;
   } finally {
-    // Hide loading message
+    // Always hide loading message
     loading.style.display = 'none';
   }
 });

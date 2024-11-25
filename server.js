@@ -1,24 +1,21 @@
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet'); // For security
+const helmet = require('helmet');
 const qr = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
-const db = require('./database'); // SQLite database setup
+const db = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Define allowed origins
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
   'http://localhost:3000',
   'https://qr-code-generator-4xvi.onrender.com',
 ];
 
-// Middleware: CORS setup
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g., mobile apps or curl)
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -27,14 +24,12 @@ app.use(
     },
   })
 );
-
-// Middleware: Helmet for security headers
 app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        imgSrc: ["'self'", 'data:'], // Allow QR code images
+        imgSrc: ["'self'", 'data:'],
         scriptSrc: ["'self'"],
         styleSrc: ["'self'"],
       },
@@ -74,16 +69,10 @@ app.post('/generate', async (req, res) => {
     const dynamicUrl = `${req.protocol}://${req.get('host')}/redirect/${id}`;
     log(`Generated dynamic URL: ${dynamicUrl}`);
 
-    // Save to database
-    try {
-      const stmt = db.prepare(
-        `INSERT INTO links (id, originalUrl, dynamicUrl) VALUES (?, ?, ?)`
-      );
-      stmt.run(id, cleanUrl, dynamicUrl);
-    } catch (error) {
-      console.error('Database Insert Error:', error.message);
-      return res.status(500).json({ error: 'Failed to save link to the database', details: error.message });
-    }
+    const stmt = db.prepare(
+      `INSERT INTO links (id, originalUrl, dynamicUrl, redirectCount) VALUES (?, ?, ?, 0)`
+    );
+    stmt.run(id, cleanUrl, dynamicUrl);
 
     const qrCode = await qr.toDataURL(dynamicUrl);
     res.json({ qrCode, dynamicUrl });
@@ -102,6 +91,7 @@ app.get('/redirect/:id', (req, res) => {
     const row = stmt.get(id);
 
     if (row) {
+      db.prepare(`UPDATE links SET redirectCount = redirectCount + 1 WHERE id = ?`).run(id);
       log(`Redirecting to: ${row.originalUrl}`);
       return res.redirect(row.originalUrl);
     } else {
@@ -116,8 +106,9 @@ app.get('/redirect/:id', (req, res) => {
 // Route: Fetch All Links
 app.get('/links', (req, res) => {
   try {
-    const stmt = db.prepare(`SELECT * FROM links`);
-    const rows = stmt.all();
+    const { limit = 10, offset = 0 } = req.query;
+    const stmt = db.prepare(`SELECT * FROM links LIMIT ? OFFSET ?`);
+    const rows = stmt.all(parseInt(limit), parseInt(offset));
 
     res.json(rows);
   } catch (error) {
@@ -126,26 +117,55 @@ app.get('/links', (req, res) => {
   }
 });
 
-// Graceful shutdown
-process.on('SIGINT', () => {
-  log('Shutting down server...');
-  db.close((err) => {
-    if (err) {
-      console.error('Error closing database connection:', err.message);
-    } else {
-      log('Database connection closed.');
+// Route: Delete Link
+app.delete('/links/:id', (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const stmt = db.prepare(`DELETE FROM links WHERE id = ?`);
+    const result = stmt.run(id);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Link not found' });
     }
-    process.exit(0);
-  });
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Database Delete Error:', error.message);
+    res.status(500).json({ error: 'Failed to delete link', details: error.message });
+  }
 });
 
-// Ensure the database schema exists
+// Route: Update Link
+app.put('/links/:id', (req, res) => {
+  const id = req.params.id;
+  const { originalUrl } = req.body;
+
+  if (!originalUrl) {
+    return res.status(400).json({ error: 'originalUrl is required' });
+  }
+
+  try {
+    const stmt = db.prepare(`UPDATE links SET originalUrl = ? WHERE id = ?`);
+    const result = stmt.run(originalUrl, id);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Link not found' });
+    }
+    res.json({ success: true, id, originalUrl });
+  } catch (error) {
+    console.error('Database Update Error:', error.message);
+    res.status(500).json({ error: 'Failed to update link', details: error.message });
+  }
+});
+
+// Initialize database
 try {
   db.exec(`
     CREATE TABLE IF NOT EXISTS links (
       id TEXT PRIMARY KEY,
       originalUrl TEXT NOT NULL,
-      dynamicUrl TEXT NOT NULL
+      dynamicUrl TEXT NOT NULL,
+      redirectCount INTEGER DEFAULT 0
     )
   `);
   log('Database initialized successfully.');
@@ -154,5 +174,4 @@ try {
   process.exit(1);
 }
 
-// Start the server
 app.listen(PORT, () => log(`Server running on port ${PORT}`));
