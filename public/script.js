@@ -77,7 +77,7 @@ async function fetchLinks(query = '') {
       : 'https://qr-code-generator-4xvi.onrender.com'; // Replace with your Render app URL
 
     // Fetch links
-    const response = await fetch(`${apiBaseUrl}/links?query=${query}`);
+    const response = await fetch(`${apiBaseUrl}/links/search?query=${encodeURIComponent(query)}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch links: ${response.statusText}`);
     }
@@ -89,7 +89,9 @@ async function fetchLinks(query = '') {
       const row = document.createElement('tr');
       row.innerHTML = `
         <td>${link.id}</td>
-        <td>${link.originalUrl}</td>
+        <td>
+          <input type="text" value="${link.originalUrl}" data-id="${link.id}" class="editable-url">
+        </td>
         <td><a href="${link.dynamicUrl}" target="_blank">${link.dynamicUrl}</a></td>
         <td>${link.redirectCount}</td>
         <td>
@@ -102,6 +104,11 @@ async function fetchLinks(query = '') {
     // Add delete functionality
     document.querySelectorAll('.delete-btn').forEach((button) => {
       button.addEventListener('click', () => deleteLink(button.dataset.id));
+    });
+
+    // Add update functionality
+    document.querySelectorAll('.editable-url').forEach((input) => {
+      input.addEventListener('change', () => updateLink(input.dataset.id, input.value));
     });
   } catch (error) {
     console.error('Error fetching links:', error);
@@ -132,6 +139,37 @@ async function deleteLink(id) {
   } catch (error) {
     console.error('Error deleting link:', error);
     alert('Failed to delete the link. Please try again.');
+  }
+}
+
+// Update Link
+async function updateLink(id, originalUrl) {
+  if (!isValidUrl(originalUrl)) {
+    alert('Invalid URL! Please enter a valid URL.');
+    return;
+  }
+
+  try {
+    // Dynamically determine API endpoint
+    const apiBaseUrl = window.location.origin.includes('localhost')
+      ? 'http://localhost:3000'
+      : 'https://qr-code-generator-4xvi.onrender.com'; // Replace with your Render app URL
+
+    // Send update request
+    const response = await fetch(`${apiBaseUrl}/links/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ originalUrl }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update link: ${response.statusText}`);
+    }
+
+    alert('Link updated successfully!');
+  } catch (error) {
+    console.error('Error updating link:', error);
+    alert('Failed to update the link. Please try again.');
   }
 }
 

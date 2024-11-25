@@ -7,49 +7,58 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>QR Code Generator Dashboard</h1>
+  <header>
+    <h1>QR Code Generator Dashboard</h1>
+  </header>
 
-  <!-- QR Code Generation Form -->
-  <form id="qrForm">
-    <input 
-      type="url" 
-      id="url" 
-      placeholder="Enter URL (e.g., https://example.com)" 
-      aria-label="Enter the URL to generate a QR code" 
-      required>
-    <button type="submit">Generate QR Code</button>
-    <p id="loading" style="display: none;">Generating QR Code...</p>
-  </form>
-  <div id="output"></div>
+  <!-- QR Code Generation Section -->
+  <section id="qrGenerator">
+    <h2>Generate QR Code</h2>
+    <form id="qrForm">
+      <input 
+        type="url" 
+        id="url" 
+        placeholder="Enter URL (e.g., https://example.com)" 
+        aria-label="Enter the URL to generate a QR code" 
+        required>
+      <button type="submit">Generate QR Code</button>
+      <p id="loading" style="display: none;">Generating QR Code...</p>
+    </form>
+    <div id="output"></div>
+  </section>
 
   <!-- Dashboard Section -->
   <section id="dashboard">
     <h2>Manage Links</h2>
 
     <!-- Search Box -->
-    <input 
-      type="text" 
-      id="searchQuery" 
-      placeholder="Search for a link by URL or ID..." 
-      aria-label="Search Links"
-    >
-    <button id="searchBtn">Search</button>
+    <div id="searchBox">
+      <input 
+        type="text" 
+        id="searchQuery" 
+        placeholder="Search for a link by URL or ID..." 
+        aria-label="Search Links"
+      >
+      <button id="searchBtn">Search</button>
+    </div>
 
     <!-- Links Table -->
-    <table id="linksTable">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Original URL</th>
-          <th>Dynamic URL</th>
-          <th>Redirect Count</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Dynamic Rows Will Populate Here -->
-      </tbody>
-    </table>
+    <div id="tableContainer">
+      <table id="linksTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Original URL</th>
+            <th>Dynamic URL</th>
+            <th>Redirect Count</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Dynamic Rows Will Populate Here -->
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <script src="script.js" defer></script>

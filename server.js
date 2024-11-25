@@ -59,8 +59,6 @@ const isValidUrl = (string) => {
 // Utility: Apply Schema Migrations
 const applyMigrations = () => {
   log('Applying database schema migrations...');
-
-  // Define required migrations
   const migrations = [
     {
       name: 'create_links_table',
@@ -73,16 +71,8 @@ const applyMigrations = () => {
         )
       `,
     },
-    {
-      name: 'add_redirect_count_column',
-      sql: `
-        ALTER TABLE links ADD COLUMN redirectCount INTEGER DEFAULT 0
-      `,
-      skipIfExists: true, // Only apply if the column doesn't already exist
-    },
   ];
 
-  // Ensure the migrations table exists
   db.exec(`
     CREATE TABLE IF NOT EXISTS migrations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -91,28 +81,15 @@ const applyMigrations = () => {
     )
   `);
 
-  // Apply migrations
-  migrations.forEach(({ name, sql, skipIfExists }) => {
+  migrations.forEach(({ name, sql }) => {
     const alreadyApplied = db
       .prepare('SELECT COUNT(*) AS count FROM migrations WHERE name = ?')
       .get(name).count;
 
     if (!alreadyApplied) {
       try {
-        // For `skipIfExists` migrations, check schema before applying
-        if (skipIfExists) {
-          const columnExists = db
-            .prepare("PRAGMA table_info('links')")
-            .all()
-            .some((col) => col.name === 'redirectCount');
-          if (columnExists) {
-            log(`Migration skipped: ${name} (column already exists)`);
-            return;
-          }
-        }
-
-        db.exec(sql); // Apply the migration SQL
-        db.prepare('INSERT INTO migrations (name) VALUES (?)').run(name); // Track applied migration
+        db.exec(sql);
+        db.prepare('INSERT INTO migrations (name) VALUES (?)').run(name);
         log(`Migration applied: ${name}`);
       } catch (error) {
         log(`Error applying migration ${name}: ${error.message}`);
@@ -179,18 +156,79 @@ app.get('/redirect/:id', (req, res) => {
   }
 });
 
-// Route: Fetch All Links with Pagination
+// Route: Fetch All Links
 app.get('/links', (req, res) => {
   try {
     const { limit = 10, offset = 0 } = req.query;
     const stmt = db.prepare(`SELECT * FROM links LIMIT ? OFFSET ?`);
     const rows = stmt.all(parseInt(limit), parseInt(offset));
-
     res.json(rows);
   } catch (error) {
     console.error('Database Fetch Error:', error.message);
     res.status(500).json({ error: 'Failed to retrieve links', details: error.message });
   }
+});
+
+// Route: Delete a Link
+app.delete('/links/:id', (req, res) => {
+  const id = req.params.id;
+
+  try {
+    const stmt = db.prepare(`DELETE FROM links WHERE id = ?`);
+    const result = stmt.run(id);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Link not found' });
+    }
+    res.json({ success: true, id });
+  } catch (error) {
+    console.error('Database Delete Error:', error.message);
+    res.status(500).json({ error: 'Failed to delete link', details: error.message });
+  }
+});
+
+// Route: Update a Link
+app.put('/links/:id', (req, res) => {
+  const id = req.params.id;
+  const { originalUrl } = req.body;
+
+  if (!originalUrl) {
+    return res.status(400).json({ error: 'Original URL is required' });
+  }
+
+  try {
+    const stmt = db.prepare(`UPDATE links SET originalUrl = ? WHERE id = ?`);
+    const result = stmt.run(originalUrl, id);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Link not found' });
+    }
+    res.json({ success: true, id, originalUrl });
+  } catch (error) {
+    console.error('Database Update Error:', error.message);
+    res.status(500).json({ error: 'Failed to update link', details: error.message });
+  }
+});
+
+// Route: Search Links
+app.get('/links/search', (req, res) => {
+  const { query = '' } = req.query;
+
+  try {
+    const stmt = db.prepare(`
+      SELECT * FROM links WHERE originalUrl LIKE ? OR dynamicUrl LIKE ?
+    `);
+    const rows = stmt.all(`%${query}%`, `%${query}%`);
+    res.json(rows);
+  } catch (error) {
+    console.error('Database Search Error:', error.message);
+    res.status(500).json({ error: 'Failed to search links', details: error.message });
+  }
+});
+
+// Route: Serve Dashboard
+app.get('/dashboard', (req, res) => {
+  res.sendFile(__dirname + '/public/dashboard.html');
 });
 
 app.listen(PORT, () => log(`Server running on port ${PORT}`));
