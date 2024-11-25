@@ -59,6 +59,15 @@ const isValidUrl = (string) => {
 // Utility: Apply Schema Migrations
 const applyMigrations = () => {
   log('Applying database schema migrations...');
+  
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS migrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   const migrations = [
     {
       name: 'create_links_table',
@@ -71,22 +80,24 @@ const applyMigrations = () => {
         )
       `,
     },
+    {
+      name: 'add_redirect_count_column',
+      sql: `
+        ALTER TABLE links ADD COLUMN redirectCount INTEGER DEFAULT 0
+      `,
+      condition: () => {
+        const columns = db.prepare("PRAGMA table_info(links)").all();
+        return !columns.some((col) => col.name === 'redirectCount');
+      },
+    },
   ];
 
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS migrations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL,
-      applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-  migrations.forEach(({ name, sql }) => {
+  migrations.forEach(({ name, sql, condition = () => true }) => {
     const alreadyApplied = db
       .prepare('SELECT COUNT(*) AS count FROM migrations WHERE name = ?')
       .get(name).count;
 
-    if (!alreadyApplied) {
+    if (!alreadyApplied && condition()) {
       try {
         db.exec(sql);
         db.prepare('INSERT INTO migrations (name) VALUES (?)').run(name);
@@ -94,8 +105,10 @@ const applyMigrations = () => {
       } catch (error) {
         log(`Error applying migration ${name}: ${error.message}`);
       }
-    } else {
+    } else if (alreadyApplied) {
       log(`Migration already applied: ${name}`);
+    } else {
+      log(`Migration skipped: ${name} (condition not met)`);
     }
   });
 };
@@ -231,4 +244,5 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(__dirname + '/public/dashboard.html');
 });
 
+// Start the server
 app.listen(PORT, () => log(`Server running on port ${PORT}`));
